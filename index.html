@@ -2515,7 +2515,7 @@ label {
 
   <script type="module">
 const STORAGE_KEY = "planung-pwa-state-v1";
-const APP_VERSION = 15;
+const APP_VERSION = 16;
 const DAYS_SHORT = ["Mo", "Di", "Mi", "Do", "Fr"];
 const REQUIRED_HOLIDAYS = [
   "Herbstferien",
@@ -4908,11 +4908,13 @@ class PlannerApp {
       pendingSaveReason: "",
       suppressAutoPush: false,
       fileHandle: null,
+      storedFileHandle: null,
       fileName: String(this.syncMeta.fileName || ""),
       lastQueuedLocalHash: ""
     };
     this.backupState = {
-      directoryHandle: null
+      directoryHandle: null,
+      storedDirectoryHandle: null
     };
     this.lastAutoBackupAt = "";
     this.store.setAfterSaveHook(() => {
@@ -5030,6 +5032,19 @@ class PlannerApp {
     }
   }
 
+  async hasSyncFilePermission(handle, writable = false) {
+    if (!handle || typeof handle.queryPermission !== "function") {
+      return false;
+    }
+    const mode = writable ? "readwrite" : "read";
+    try {
+      const permission = await handle.queryPermission({ mode });
+      return permission === "granted";
+    } catch (_error) {
+      return false;
+    }
+  }
+
   async pickExistingSyncFileHandle() {
     if (!this.syncState.supported) {
       return null;
@@ -5127,18 +5142,109 @@ class PlannerApp {
     }
   }
 
-  async ensureBackupDirectoryReady(syncFileHandle) {
-    if (this.backupState.directoryHandle && await this.ensureSyncFilePermission(this.backupState.directoryHandle, true)) {
-      return true;
+  async ensureBackupDirectoryReady(syncFileHandle, options = {}) {
+    const { allowPrompt = true } = options;
+    if (this.backupState.directoryHandle) {
+      const activePermissionGranted = allowPrompt
+        ? await this.ensureSyncFilePermission(this.backupState.directoryHandle, true)
+        : await this.hasSyncFilePermission(this.backupState.directoryHandle, true);
+      if (activePermissionGranted) {
+        return true;
+      }
     }
     this.backupState.directoryHandle = null;
-    const storedBackupDir = await getStoredHandle(SYNC_HANDLE_BACKUP_DIR_KEY);
-    if (storedBackupDir && await this.ensureSyncFilePermission(storedBackupDir, true)) {
+
+    let storedBackupDir = this.backupState.storedDirectoryHandle;
+    if (!storedBackupDir) {
+      storedBackupDir = await getStoredHandle(SYNC_HANDLE_BACKUP_DIR_KEY);
+      this.backupState.storedDirectoryHandle = storedBackupDir || null;
+    }
+    if (!storedBackupDir) {
+      void syncFileHandle;
+      return false;
+    }
+    const storedPermissionGranted = allowPrompt
+      ? await this.ensureSyncFilePermission(storedBackupDir, true)
+      : await this.hasSyncFilePermission(storedBackupDir, true);
+    if (storedPermissionGranted) {
       this.backupState.directoryHandle = storedBackupDir;
       return true;
     }
     void syncFileHandle;
     return false;
+  }
+
+  async connectSyncFileHandle(handle, source = "manual") {
+    if (!handle) {
+      return false;
+    }
+    const isStartup = source === "startup";
+    this.syncState.fileHandle = handle;
+    this.syncState.storedFileHandle = handle;
+    this.syncState.fileName = String(handle.name || this.syncMeta.fileName || this.syncState.fileName || "");
+    this.syncMeta.fileName = this.syncState.fileName;
+    this.saveSyncMeta();
+    await storeHandle(SYNC_HANDLE_FILE_KEY, handle);
+
+    const backupDirectoryReady = await this.ensureBackupDirectoryReady(handle, {
+      allowPrompt: !isStartup
+    });
+    if (backupDirectoryReady) {
+      this.setBackupStatus("Backups werden im selben Ordner wie die Datenbankdatei erstellt.");
+    } else {
+      this.setBackupStatus("Backup-Ordner fehlt. Bei Bedarf bitte über den Button auswählen.");
+    }
+
+    const remoteEnvelope = await this.readSyncEnvelopeFromHandle(handle);
+    if (remoteEnvelope && remoteEnvelope.payload) {
+      if (isStartup) {
+        await this.applyRemoteEnvelopeToApp(remoteEnvelope, "startup");
+      } else {
+        const remoteHash = this.getPayloadStateHash(remoteEnvelope.payload);
+        const localHash = this.getCurrentStateHash();
+        if (remoteHash !== localHash) {
+          await this.applyRemoteEnvelopeToApp(remoteEnvelope, "manual");
+        } else {
+          this.markKnownRemote(remoteEnvelope);
+          this.setSyncStatus("Datenbankdatei verbunden.");
+        }
+      }
+    } else {
+      const hasContent = await this.hasNonEmptySyncFile(handle);
+      if (hasContent) {
+        this.setSyncStatus("Vorhandene Datei erkannt (Format nicht kompatibel). Datei wurde nicht überschrieben.", true);
+      } else if (isStartup) {
+        this.setSyncStatus("Datenbankdatei verbunden. Datei wird beim nächsten Speichern befüllt.");
+      } else {
+        await this.pushLocalStateToSyncFile({
+          manual: true,
+          allowConflictPrompt: false,
+          reason: "initial-seed"
+        });
+      }
+    }
+    return true;
+  }
+
+  async tryReconnectStoredSyncFile() {
+    if (this.syncState.fileHandle) {
+      return false;
+    }
+    let storedHandle = this.syncState.storedFileHandle;
+    if (!storedHandle) {
+      storedHandle = await getStoredHandle(SYNC_HANDLE_FILE_KEY);
+      this.syncState.storedFileHandle = storedHandle || null;
+    }
+    if (!storedHandle) {
+      return false;
+    }
+    if (!await this.ensureSyncFilePermission(storedHandle, true)) {
+      return false;
+    }
+    await this.connectSyncFileHandle(storedHandle, "manual");
+    this.syncState.initialized = true;
+    this.renderAll();
+    return true;
   }
 
   async writeBackupFileSnapshot(payload) {
@@ -5380,40 +5486,7 @@ class PlannerApp {
       this.setSyncStatus("Zugriff auf die Datenbankdatei wurde verweigert.", true);
       return;
     }
-    this.syncState.fileHandle = handle;
-    this.syncState.fileName = String(handle.name || this.syncMeta.fileName || this.syncState.fileName || "");
-    this.syncMeta.fileName = this.syncState.fileName;
-    this.saveSyncMeta();
-    await storeHandle(SYNC_HANDLE_FILE_KEY, handle);
-    const backupDirectoryReady = await this.ensureBackupDirectoryReady(handle);
-    if (backupDirectoryReady) {
-      this.setBackupStatus("Backups werden im selben Ordner wie die Datenbankdatei erstellt.");
-    } else {
-      this.setBackupStatus("Backup-Ordner fehlt. Bei Bedarf bitte über den Button auswählen.");
-    }
-
-    const remoteEnvelope = await this.readSyncEnvelopeFromHandle(handle);
-    if (remoteEnvelope && remoteEnvelope.payload) {
-      const remoteHash = this.getPayloadStateHash(remoteEnvelope.payload);
-      const localHash = this.getCurrentStateHash();
-      if (remoteHash !== localHash) {
-        await this.applyRemoteEnvelopeToApp(remoteEnvelope, "manual");
-      } else {
-        this.markKnownRemote(remoteEnvelope);
-        this.setSyncStatus("Datenbankdatei verbunden.");
-      }
-    } else {
-      const hasContent = await this.hasNonEmptySyncFile(handle);
-      if (hasContent) {
-        this.setSyncStatus("Vorhandene Datei erkannt (Format nicht kompatibel). Datei wurde nicht überschrieben.", true);
-      } else {
-        await this.pushLocalStateToSyncFile({
-          manual: true,
-          allowConflictPrompt: false,
-          reason: "initial-seed"
-        });
-      }
-    }
+    await this.connectSyncFileHandle(handle, "manual");
     this.syncState.initialized = true;
     this.renderAll();
   }
@@ -5432,9 +5505,11 @@ class PlannerApp {
     const storedSyncHandle = await getStoredHandle(SYNC_HANDLE_FILE_KEY);
     if (!storedSyncHandle) {
       this.syncState.fileHandle = null;
+      this.syncState.storedFileHandle = null;
       this.syncState.fileName = "";
       this.syncMeta.fileName = "";
       this.backupState.directoryHandle = null;
+      this.backupState.storedDirectoryHandle = null;
       this.saveSyncMeta();
       this.syncState.initialized = true;
       this.setSyncStatus("Noch keine Datenbankdatei verbunden.");
@@ -5442,44 +5517,22 @@ class PlannerApp {
       this.renderDatabaseSection();
       return;
     }
-    if (!await this.ensureSyncFilePermission(storedSyncHandle, false)) {
-      await clearStoredHandle(SYNC_HANDLE_FILE_KEY);
-      await clearStoredHandle(SYNC_HANDLE_BACKUP_DIR_KEY);
+    this.syncState.storedFileHandle = storedSyncHandle;
+    this.syncState.fileName = String(storedSyncHandle.name || this.syncMeta.fileName || "");
+    this.syncMeta.fileName = this.syncState.fileName;
+    this.backupState.storedDirectoryHandle = await getStoredHandle(SYNC_HANDLE_BACKUP_DIR_KEY);
+    if (!await this.hasSyncFilePermission(storedSyncHandle, false)) {
       this.syncState.fileHandle = null;
-      this.syncState.fileName = "";
-      this.syncMeta.fileName = "";
       this.backupState.directoryHandle = null;
       this.saveSyncMeta();
       this.syncState.initialized = true;
-      this.setSyncStatus("Bitte Datenbankdatei erneut auswählen.", true);
+      this.setSyncStatus("Gespeicherte Datenbank gefunden. Bitte Zugriff erlauben.", true);
       this.openSyncSetupSettingsOnStartup();
-      this.renderDatabaseSection();
+      this.renderAll();
       return;
     }
 
-    this.syncState.fileHandle = storedSyncHandle;
-    this.syncState.fileName = String(storedSyncHandle.name || this.syncMeta.fileName || "");
-    this.syncMeta.fileName = this.syncState.fileName;
-    this.saveSyncMeta();
-
-    const storedBackupDir = await getStoredHandle(SYNC_HANDLE_BACKUP_DIR_KEY);
-    if (storedBackupDir && await this.ensureSyncFilePermission(storedBackupDir, true)) {
-      this.backupState.directoryHandle = storedBackupDir;
-    } else {
-      this.backupState.directoryHandle = null;
-    }
-
-    const remoteEnvelope = await this.readSyncEnvelopeFromHandle(storedSyncHandle);
-    if (remoteEnvelope && remoteEnvelope.payload) {
-      await this.applyRemoteEnvelopeToApp(remoteEnvelope, "startup");
-    } else {
-      const hasContent = await this.hasNonEmptySyncFile(storedSyncHandle);
-      if (hasContent) {
-        this.setSyncStatus("Vorhandene Datei erkannt (Format nicht kompatibel). Datei wurde nicht überschrieben.", true);
-      } else {
-        this.setSyncStatus("Datenbankdatei verbunden. Datei wird beim nächsten Speichern befüllt.");
-      }
-    }
+    await this.connectSyncFileHandle(storedSyncHandle, "startup");
 
     this.currentView = "week";
     this.activeSettingsTab = "dayoff";
@@ -8178,8 +8231,17 @@ class PlannerApp {
           await this.showInfoMessage("Bitte zuerst eine Datenbankdatei auswählen.");
           return;
         }
+        if (!this.backupState.directoryHandle && this.backupState.storedDirectoryHandle) {
+          if (await this.ensureSyncFilePermission(this.backupState.storedDirectoryHandle, true)) {
+            this.backupState.directoryHandle = this.backupState.storedDirectoryHandle;
+            this.setBackupStatus("Backup-Ordner verbunden.");
+            this.renderAll();
+            return;
+          }
+        }
         const assigned = await this.assignBackupDirectoryFromSyncFile(this.syncState.fileHandle);
         if (assigned && this.backupState.directoryHandle) {
+          this.backupState.storedDirectoryHandle = this.backupState.directoryHandle;
           await storeHandle(SYNC_HANDLE_BACKUP_DIR_KEY, this.backupState.directoryHandle);
           this.setBackupStatus("Backup-Ordner verbunden.");
         } else {
@@ -8231,6 +8293,10 @@ class PlannerApp {
 
     if (this.refs.dbSelectExistingBtn) {
       this.refs.dbSelectExistingBtn.addEventListener("click", async () => {
+        const reconnected = await this.tryReconnectStoredSyncFile();
+        if (reconnected) {
+          return;
+        }
         await this.selectSyncFile("existing");
       });
     }
@@ -8736,9 +8802,15 @@ class PlannerApp {
   }
 
   renderDatabaseSection() {
+    const pendingStoredHandle = !this.syncState.fileHandle ? this.syncState.storedFileHandle : null;
+    const pendingStoredFileName = pendingStoredHandle
+      ? String(pendingStoredHandle.name || this.syncState.fileName || this.syncMeta.fileName || "")
+      : "";
     if (this.refs.syncFileName) {
       if (!this.syncState.supported) {
         this.refs.syncFileName.textContent = "Nicht unterstützt";
+      } else if (pendingStoredHandle) {
+        this.refs.syncFileName.textContent = `Datenbankdatei: ${pendingStoredFileName} (Zugriff ausstehend)`;
       } else if (!this.syncState.fileHandle) {
         this.refs.syncFileName.textContent = "Datenbankdatei: nicht ausgewählt";
       } else {
@@ -8756,11 +8828,16 @@ class PlannerApp {
         const hasConnectedStatus = currentStatus === "Datenbankdatei verbunden."
           || currentStatus.startsWith("Zuletzt synchronisiert:");
         if (!currentStatus || hasConnectedStatus) {
-          this.setSyncStatus("Noch keine Datenbankdatei verbunden.");
+          this.setSyncStatus(
+            pendingStoredHandle
+              ? "Gespeicherte Datenbank gefunden. Bitte Zugriff erlauben."
+              : "Noch keine Datenbankdatei verbunden."
+          );
         }
       } else {
         const hasDisconnectedStatus = currentStatus === "Noch keine Datenbankdatei verbunden."
-          || currentStatus === "Bitte Datenbankdatei erneut auswählen.";
+          || currentStatus === "Bitte Datenbankdatei erneut auswählen."
+          || currentStatus === "Gespeicherte Datenbank gefunden. Bitte Zugriff erlauben.";
         if (!currentStatus || hasDisconnectedStatus) {
           if (this.syncMeta.lastSyncedAt) {
             this.setSyncStatus(`Zuletzt synchronisiert: ${this.formatDateTime(this.syncMeta.lastSyncedAt)}`);
@@ -8794,6 +8871,7 @@ class PlannerApp {
     const enabled = Boolean(draft.backupEnabled);
     const interval = clamp(Number(draft.backupIntervalDays) || BACKUP_INTERVAL_DEFAULT_DAYS, 1, 30);
     const backupFileConnected = Boolean(this.backupState.directoryHandle);
+    const pendingStoredBackupDir = !backupFileConnected ? this.backupState.storedDirectoryHandle : null;
     if (this.refs.backupDirName) {
       if (!this.syncState.supported) {
         this.refs.backupDirName.textContent = "Backup-Ordner: nicht unterstützt";
@@ -8801,6 +8879,8 @@ class PlannerApp {
         this.refs.backupDirName.textContent = "Backup-Ordner: nicht ausgewählt";
       } else if (backupFileConnected) {
         this.refs.backupDirName.textContent = `Backup-Ordner: ${String(this.backupState.directoryHandle.name || "")}`;
+      } else if (pendingStoredBackupDir) {
+        this.refs.backupDirName.textContent = `Backup-Ordner: ${String(pendingStoredBackupDir.name || "")} (Zugriff ausstehend)`;
       } else {
         this.refs.backupDirName.textContent = "Backup-Ordner: nicht ausgewählt";
       }

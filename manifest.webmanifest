@@ -1,7 +1,7 @@
 {
   "name": "Planung",
   "short_name": "Planung",
-  "description": "Planer (Version 15)",
+  "description": "Planer (Version 16)",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#e2e8f0",
