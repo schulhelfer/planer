@@ -1,6 +1,7 @@
 {
   "name": "Planung",
   "short_name": "Planung",
+  "description": "Planer (Version 15)",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#e2e8f0",
@@ -8,13 +9,13 @@
   "lang": "de-DE",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
