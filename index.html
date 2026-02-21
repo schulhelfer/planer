@@ -2515,7 +2515,7 @@ label {
 
   <script type="module">
 const STORAGE_KEY = "planung-pwa-state-v1";
-const APP_VERSION = 12;
+const APP_VERSION = 13;
 const DAYS_SHORT = ["Mo", "Di", "Mi", "Do", "Fr"];
 const REQUIRED_HOLIDAYS = [
   "Herbstferien",
@@ -5481,6 +5481,11 @@ class PlannerApp {
       }
     }
 
+    this.currentView = "week";
+    this.activeSettingsTab = "dayoff";
+    this.weekStartIso = this._clampWeekStart(currentWeekStartForDisplay());
+    this.selectedLessonId = null;
+    this.selectedCourseId = null;
     this.syncState.initialized = true;
     this.renderAll();
   }
