@@ -2515,7 +2515,6 @@ label {
 
   <script type="module">
 const STORAGE_KEY = "planung-pwa-state-v1";
-const APP_VERSION = 16;
 const DAYS_SHORT = ["Mo", "Di", "Mi", "Do", "Fr"];
 const REQUIRED_HOLIDAYS = [
   "Herbstferien",
@@ -4892,6 +4891,9 @@ class PlannerApp {
     this.pendingMessageDialogMode = null;
     this.pendingEntfallLessonId = null;
     this.pendingTopicLessonId = null;
+    this.pwaRegistration = null;
+    this.pwaReloadTriggered = false;
+    this.appVersion = "";
     this.weekCalendarMonthIso = null;
     this.weekCalendarHoverWeekStart = null;
     this.courseDialogSelectedColor = normalizeHexColor(DEFAULT_COURSE_COLOR, DEFAULT_COURSE_COLOR);
@@ -8704,8 +8706,80 @@ class PlannerApp {
 
   initPwa() {
     if ("serviceWorker" in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register("./sw.js").catch(() => undefined);
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        const data = event.data || {};
+        if (data.type === "VERSION" && Number.isFinite(Number(data.version))) {
+          this.appVersion = String(Number(data.version));
+          if (this.refs.appVersion) {
+            this.refs.appVersion.textContent = this.appVersion;
+          }
+        }
+      });
+
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (this.pwaReloadTriggered) {
+          return;
+        }
+        this.pwaReloadTriggered = true;
+        window.location.reload();
+      });
+
+      navigator.serviceWorker.register("./service-worker.js")
+        .then((registration) => {
+          this.pwaRegistration = registration;
+          this.requestServiceWorkerVersion();
+          this.attachServiceWorkerUpdateHandlers(registration);
+          return registration.update().catch(() => undefined);
+        })
+        .catch(() => undefined);
     }
+  }
+
+  requestServiceWorkerVersion() {
+    if (!("serviceWorker" in navigator)) {
+      return;
+    }
+    const registration = this.pwaRegistration;
+    const worker = (registration && (registration.active || registration.waiting || registration.installing))
+      || navigator.serviceWorker.controller;
+    if (!worker || typeof worker.postMessage !== "function") {
+      return;
+    }
+    worker.postMessage({ type: "GET_VERSION" });
+  }
+
+  attachServiceWorkerUpdateHandlers(registration) {
+    const promptForWaitingUpdate = async () => {
+      if (!registration.waiting) {
+        return;
+      }
+      const confirmed = await this.showConfirmMessage("Neue Version verfügbar – App neu starten", {
+        title: "Update verfügbar",
+        okText: "Neu starten",
+        cancelText: "Später"
+      });
+      if (!confirmed || !registration.waiting) {
+        return;
+      }
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    };
+
+    if (registration.waiting) {
+      void promptForWaitingUpdate();
+    }
+
+    registration.addEventListener("updatefound", () => {
+      const installing = registration.installing;
+      if (!installing) {
+        return;
+      }
+      installing.addEventListener("statechange", () => {
+        if (installing.state === "installed" && registration.waiting) {
+          void promptForWaitingUpdate();
+          this.requestServiceWorkerVersion();
+        }
+      });
+    });
   }
 
   setBackupStatus(text, isError = false) {
@@ -9690,7 +9764,7 @@ class PlannerApp {
       this.refs.showHiddenSidebarCourses.checked = draftShowHidden;
     }
     if (this.refs.appVersion) {
-      this.refs.appVersion.textContent = String(APP_VERSION);
+      this.refs.appVersion.textContent = this.appVersion || "unbekannt";
     }
     this.syncAllNumberSteppers();
     this.updateSettingsActionButtons();
