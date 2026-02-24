@@ -569,6 +569,21 @@ button.small {
   overflow: hidden;
 }
 
+body[data-view="week"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+body[data-view="week"] .app-window {
+  max-width: none;
+  width: max-content;
+  min-width: 100vw;
+}
+
+body[data-view="week"] .main-pane {
+  overflow: visible;
+}
+
 .sidebar-panel,
 .header-glass,
 .stack-glass {
@@ -1273,6 +1288,7 @@ body[data-view="course"] .sidebar-list {
 }
 
 #week-table {
+  width: max(100%, var(--week-table-min-width));
   min-width: 640px;
 }
 
@@ -1384,6 +1400,17 @@ body[data-view="course"] .sidebar-list {
 
 #view-week #week-table tbody tr {
   height: calc((100% - var(--week-header-height, 46px)) / var(--hours-per-day, 8));
+  overflow: hidden;
+}
+
+#view-week #week-table td {
+  height: 100%;
+  overflow: hidden;
+}
+
+.week-block-cell {
+  height: 100%;
+  overflow: hidden;
 }
 
 #week-table th:first-child {
@@ -1395,7 +1422,9 @@ body[data-view="course"] .sidebar-list {
 }
 
 .day-cell {
-  min-height: 64px;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .day-head .day-name,
@@ -1483,6 +1512,13 @@ body[data-view="course"] .sidebar-list {
   background: rgba(102, 153, 222, 0.82);
   font-weight: 700;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  font-size: calc(1rem * var(--week-text-scale));
+  overflow: hidden;
+}
+
+#view-week #week-table {
+  --week-text-scale: 1;
+  --week-table-min-width: 640px;
 }
 
 .lesson-block.not-selectable {
@@ -1515,7 +1551,7 @@ body[data-view="course"] .sidebar-list {
   right: 0.32rem;
   text-align: center;
   pointer-events: none;
-  font-size: 1rem;
+  font-size: 1em;
   font-weight: 700;
 }
 
@@ -1523,7 +1559,7 @@ body[data-view="course"] .sidebar-list {
   display: block;
   width: 100%;
   text-align: center;
-  font-size: 1.3rem;
+  font-size: 1.3em;
   opacity: 0.95;
 }
 
@@ -3225,6 +3261,7 @@ class PlannerStore {
       this.resetSpecialDays(startYear);
     }
     this._save();
+    window.addEventListener("resize", () => this.applyWeekLayoutConstraints());
   }
 
   _load() {
@@ -4941,7 +4978,56 @@ class PlannerApp {
     }
     return year;
   }
+  applyWeekLayoutConstraints() {
+  if (this.currentView !== "week") {
+    return;
+  }
+  const table = this.refs.weekTable;
+  if (!table) {
+    return;
+  }
 
+  table.style.setProperty("--week-text-scale", "1");
+  table.style.setProperty("--week-table-min-width", "640px");
+
+  requestAnimationFrame(() => {
+    const blocks = [...table.querySelectorAll(".lesson-block")];
+    let scale = 1;
+
+    for (const block of blocks) {
+      const availW = Math.max(0, block.clientWidth - 4);
+      const availH = Math.max(0, block.clientHeight - 4);
+      if (availW === 0 || availH === 0) {
+        continue;
+      }
+      const needW = Math.max(1, block.scrollWidth);
+      const needH = Math.max(1, block.scrollHeight);
+      const s = Math.min(availW / needW, availH / needH);
+      scale = Math.min(scale, s);
+    }
+
+    scale = clamp(scale, 0.65, 1);
+    table.style.setProperty("--week-text-scale", String(scale));
+
+    requestAnimationFrame(() => {
+      let worstRatio = 1;
+
+      for (const block of blocks) {
+        const cw = Math.max(1, block.clientWidth);
+        const ch = Math.max(1, block.clientHeight);
+        const rw = block.scrollWidth / cw;
+        const rh = block.scrollHeight / ch;
+        worstRatio = Math.max(worstRatio, rw, rh);
+      }
+
+      if (worstRatio > 1.01) {
+        const currentW = Math.max(640, Math.ceil(table.getBoundingClientRect().width));
+        const targetW = Math.ceil(currentW * worstRatio);
+        table.style.setProperty("--week-table-min-width", `${targetW}px`);
+      }
+    });
+  });
+}
   buildSettingsDraftFromStore() {
     return {
       hoursPerDay: this.store.getHoursPerDay(),
@@ -10303,6 +10389,7 @@ class PlannerApp {
     this.refs.weekTable.append(thead, tbody);
     const headerHeight = Math.max(1, Math.round(headerRow.getBoundingClientRect().height));
     this.refs.weekTable.style.setProperty("--week-header-height", `${headerHeight}px`);
+    this.applyWeekLayoutConstraints();
   }
 
   renderLessonSection() {
