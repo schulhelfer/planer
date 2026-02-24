@@ -1,4 +1,4 @@
-const VERSION = 18;
+const VERSION = 17;
 const CACHE_NAME = `planung-v${VERSION}`;
 const APP_SHELL = [
   "./",
