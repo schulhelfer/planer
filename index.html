@@ -145,12 +145,14 @@ button:disabled {
 }
 
 input[type="number"] {
+  appearance: textfield;
   -moz-appearance: textfield;
 }
 
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
+  appearance: none;
   -webkit-appearance: none;
 }
 
@@ -1240,6 +1242,8 @@ button.small {
   padding: 0;
   height: 100%;
   min-height: 0;
+  overflow-y: hidden;
+  overflow-x: auto;
 }
 
 #view-course .table-panel {
@@ -1278,6 +1282,8 @@ body[data-view="course"] .sidebar-list {
 
 #view-week #week-table {
   height: 100%;
+  box-sizing: border-box;
+  --week-block-font-scale: 1;
 }
 
 #week-table th,
@@ -1383,7 +1389,7 @@ body[data-view="course"] .sidebar-list {
 }
 
 #view-week #week-table tbody tr {
-  height: calc((100% - var(--week-header-height, 46px)) / var(--hours-per-day, 8));
+  height: var(--week-row-height, auto);
 }
 
 #week-table th:first-child {
@@ -1396,6 +1402,10 @@ body[data-view="course"] .sidebar-list {
 
 .day-cell {
   min-height: 64px;
+}
+
+#view-week #week-table .day-cell {
+  min-height: 0;
 }
 
 .day-head .day-name,
@@ -1472,17 +1482,39 @@ body[data-view="course"] .sidebar-list {
 .lesson-block {
   border: 1px solid rgba(0, 0, 0, 0.18);
   border-radius: 8px;
-  padding: 0.32rem;
+  padding: 0.24rem 0.28rem;
   width: 100%;
   position: relative;
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  justify-items: center;
   align-items: center;
+  row-gap: 0.12rem;
   text-align: center;
   min-height: 100%;
   background: rgba(102, 153, 222, 0.82);
   font-weight: 700;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  transition:
+    transform 0.12s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease,
+    filter 0.14s ease;
+}
+
+.lesson-block:hover:not(:disabled):not(.not-selectable),
+.lesson-block:focus-visible:not(:disabled):not(.not-selectable) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow:
+    0 4px 10px rgba(6, 12, 20, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  filter: saturate(1.03) brightness(1.02);
+}
+
+.lesson-block:active:not(:disabled):not(.not-selectable) {
+  transform: translateY(0);
 }
 
 .lesson-block.not-selectable {
@@ -1509,22 +1541,60 @@ body[data-view="course"] .sidebar-list {
 
 .lesson-block .title {
   display: block;
-  position: absolute;
-  top: 0.24rem;
-  left: 0.32rem;
-  right: 0.32rem;
+  position: static;
+  width: 100%;
+  max-width: 100%;
   text-align: center;
   pointer-events: none;
-  font-size: 1rem;
+  font-size: calc(1rem * var(--week-block-font-scale, 1));
+  line-height: 1.1;
   font-weight: 700;
 }
 
 .lesson-block .line {
   display: block;
   width: 100%;
+  max-width: 100%;
   text-align: center;
-  font-size: 1.3rem;
+  font-size: calc(1.3rem * var(--week-block-font-scale, 1));
+  line-height: 1.12;
   opacity: 0.95;
+}
+
+.lesson-block .title,
+.lesson-block .line {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-overflow: clip;
+}
+
+.lesson-block.inline-editing {
+  cursor: text;
+}
+
+.lesson-block .week-inline-topic-input {
+  width: 100%;
+  min-width: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(10, 16, 24, 0.22);
+  color: inherit;
+  text-align: center;
+  font-size: calc(1.08rem * var(--week-block-font-scale, 1));
+  line-height: 1.12;
+  font-weight: 700;
+  padding: 0.12rem 0.24rem;
+}
+
+.lesson-block .week-inline-topic-input::placeholder {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.lesson-block .week-inline-topic-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 .form-grid {
@@ -1847,12 +1917,23 @@ label {
 }
 
 #settings-tab-dayoff #special-day-list li[data-add-item="1"] {
+  display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  max-width: 36px;
+  min-height: 36px;
+  max-height: 36px;
   padding: 0;
+  margin: 4px auto 0;
+  gap: 0;
+  border-radius: 0;
   border: 0;
   background: transparent;
+  box-shadow: none;
 }
 
 #settings-tab-dayoff .item-actions {
@@ -4891,6 +4972,8 @@ class PlannerApp {
     this.pendingMessageDialogMode = null;
     this.pendingEntfallLessonId = null;
     this.pendingTopicLessonId = null;
+    this.inlineTopicLessonId = null;
+    this.inlineTopicDraft = "";
     this.pwaRegistration = null;
     this.pwaReloadTriggered = false;
     this.appVersion = "";
@@ -5978,6 +6061,7 @@ class PlannerApp {
     if (this.locked) {
       this.closeWeekCalendarDialog();
       this.closeTopicDialog();
+      this.resetInlineWeekBlockTopicEdit();
       this.currentView = "settings";
       this.activeSettingsTab = (this.lockReason === "databaseRequired" || this.lockReason === "backupDirRequired")
         ? "database"
@@ -7605,6 +7689,7 @@ class PlannerApp {
     this.hideContextMenu();
     this.closeWeekCalendarDialog();
     this.closeTopicDialog();
+    this.resetInlineWeekBlockTopicEdit();
     if (this.locked && viewName !== "settings") {
       this.currentView = "settings";
       this.renderViewState();
@@ -8073,27 +8158,63 @@ class PlannerApp {
       });
     }
 
+    this.refs.weekTable.addEventListener("mousedown", (event) => {
+      if (this.locked) {
+        return;
+      }
+      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      if (inlineTopicInput) {
+        return;
+      }
+      const activeLessonId = Number(this.inlineTopicLessonId || 0);
+      if (!activeLessonId) {
+        return;
+      }
+      const lessonBlock = event.target.closest(".lesson-block[data-lesson-id]");
+      if (!lessonBlock) {
+        return;
+      }
+      if (lessonBlock.dataset.noLesson === "1" || lessonBlock.matches("button:disabled")) {
+        return;
+      }
+      const nextLessonId = Number(lessonBlock.dataset.lessonId || 0);
+      if (!nextLessonId || nextLessonId === activeLessonId) {
+        return;
+      }
+      event.preventDefault();
+      this.finishInlineWeekBlockTopicEdit(true, nextLessonId);
+    });
+
     this.refs.weekTable.addEventListener("click", (event) => {
       if (this.locked) {
         return;
       }
       this.hideContextMenu();
-      const lessonButton = event.target.closest("button.lesson-block[data-lesson-id]");
-      if (lessonButton) {
-        if (lessonButton.disabled) {
+      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      if (inlineTopicInput) {
+        return;
+      }
+      const lessonBlock = event.target.closest(".lesson-block[data-lesson-id]");
+      if (lessonBlock) {
+        if (lessonBlock.matches("button:disabled")) {
           return;
         }
-        if (lessonButton.dataset.noLesson === "1") {
+        if (lessonBlock.dataset.noLesson === "1") {
           this.selectedLessonId = null;
+          this.resetInlineWeekBlockTopicEdit();
           this.renderWeekTable();
           this.renderLessonSection();
           return;
         }
-        const lessonId = Number(lessonButton.dataset.lessonId);
-        this.selectedLessonId = lessonId;
-        this.renderWeekTable();
-        this.renderLessonSection();
-        this.promptEditWeekBlockTopic(lessonId);
+        const lessonId = Number(lessonBlock.dataset.lessonId);
+        if (lessonId && lessonId === Number(this.inlineTopicLessonId || 0)) {
+          return;
+        }
+        if (!this.promptEditWeekBlockTopic(lessonId)) {
+          this.selectedLessonId = lessonId;
+          this.renderWeekTable();
+          this.renderLessonSection();
+        }
         return;
       }
 
@@ -8103,17 +8224,69 @@ class PlannerApp {
       }
       if (this.selectedLessonId !== null) {
         this.selectedLessonId = null;
+        this.resetInlineWeekBlockTopicEdit();
         this.renderWeekTable();
         this.renderLessonSection();
       }
+    });
+
+    this.refs.weekTable.addEventListener("input", (event) => {
+      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      if (!inlineTopicInput) {
+        return;
+      }
+      const lessonId = Number(inlineTopicInput.dataset.lessonId || 0);
+      if (!lessonId || lessonId !== Number(this.inlineTopicLessonId || 0)) {
+        return;
+      }
+      this.inlineTopicDraft = inlineTopicInput.value;
+    });
+
+    this.refs.weekTable.addEventListener("keydown", (event) => {
+      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      if (!inlineTopicInput) {
+        return;
+      }
+      const lessonId = Number(inlineTopicInput.dataset.lessonId || 0);
+      if (!lessonId || lessonId !== Number(this.inlineTopicLessonId || 0)) {
+        return;
+      }
+      this.inlineTopicDraft = inlineTopicInput.value;
+      event.stopPropagation();
+      if (event.key === "Enter") {
+        event.preventDefault();
+        this.finishInlineWeekBlockTopicEdit(true);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        this.finishInlineWeekBlockTopicEdit(false);
+      }
+    });
+
+    this.refs.weekTable.addEventListener("focusout", (event) => {
+      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      if (!inlineTopicInput) {
+        return;
+      }
+      const lessonId = Number(inlineTopicInput.dataset.lessonId || 0);
+      if (!lessonId || lessonId !== Number(this.inlineTopicLessonId || 0)) {
+        return;
+      }
+      this.inlineTopicDraft = inlineTopicInput.value;
+      const nextFocused = event.relatedTarget;
+      if (nextFocused === inlineTopicInput) {
+        return;
+      }
+      this.finishInlineWeekBlockTopicEdit(true);
     });
 
     this.refs.weekTable.addEventListener("dblclick", async (event) => {
       if (this.locked) {
         return;
       }
-      const lessonButton = event.target.closest("button.lesson-block[data-lesson-id]");
-      if (lessonButton) {
+      const lessonBlock = event.target.closest(".lesson-block[data-lesson-id]");
+      if (lessonBlock) {
         return;
       }
       const dayCell = event.target.closest("td.day-cell.empty[data-day][data-hour]");
@@ -8135,18 +8308,19 @@ class PlannerApp {
         this.hideContextMenu();
         return;
       }
-      const lessonButton = event.target.closest("button.lesson-block[data-lesson-id]");
-      if (!lessonButton || lessonButton.disabled) {
+      const lessonBlock = event.target.closest(".lesson-block[data-lesson-id]");
+      if (!lessonBlock || lessonBlock.matches("button:disabled")) {
         this.hideContextMenu();
         if (this.selectedLessonId) {
           this.selectedLessonId = null;
+          this.resetInlineWeekBlockTopicEdit();
           this.renderWeekTable();
           this.renderLessonSection();
         }
         return;
       }
       this.openWeekBlockContextMenu(
-        Number(lessonButton.dataset.lessonId),
+        Number(lessonBlock.dataset.lessonId),
         event.clientX,
         event.clientY,
         "week"
@@ -8641,7 +8815,7 @@ class PlannerApp {
         return;
       }
       const isMenuAnchor = Boolean(
-        event.target && event.target.closest && event.target.closest("button.lesson-block[data-lesson-id]")
+        event.target && event.target.closest && event.target.closest(".lesson-block[data-lesson-id]")
       ) || Boolean(
         event.target && event.target.closest && event.target.closest("tr[data-lesson-id]")
       );
@@ -8666,6 +8840,9 @@ class PlannerApp {
       this.hideContextMenu();
       if (this.refs.weekCalendarDialog && this.refs.weekCalendarDialog.open) {
         this.positionWeekCalendarDialog();
+      }
+      if (this.currentView === "week") {
+        this.syncWeekTableRowHeights();
       }
     });
 
@@ -9291,8 +9468,102 @@ class PlannerApp {
     return String(displayText || "").trim();
   }
 
+  resetInlineWeekBlockTopicEdit() {
+    this.inlineTopicLessonId = null;
+    this.inlineTopicDraft = "";
+  }
+
+  startInlineWeekBlockTopicEdit(lessonId) {
+    const lesson = this.store.getLessonById(lessonId);
+    if (!lesson) {
+      return false;
+    }
+    const block = this.store.getLessonBlock(lesson.id);
+    if (block.length === 0) {
+      return false;
+    }
+    const allCanceled = block.every((entry) => entry.canceled);
+    if (allCanceled || lesson.noLesson) {
+      return false;
+    }
+    const isEntfall = block.some((entry) => entry.isEntfall);
+    const isWritten = block.some((entry) => entry.isWrittenExam);
+    if (isEntfall || isWritten) {
+      return false;
+    }
+    const firstTopic = block
+      .map((entry) => String(entry.topic || "").trim())
+      .find(Boolean) || "";
+    this.inlineTopicLessonId = lesson.id;
+    this.inlineTopicDraft = firstTopic;
+    this.selectedLessonId = lesson.id;
+    this.renderWeekTable();
+    this.renderLessonSection();
+    requestAnimationFrame(() => {
+      const currentLessonId = Number(this.inlineTopicLessonId || 0);
+      if (!currentLessonId || currentLessonId !== lesson.id || !this.refs.weekTable) {
+        return;
+      }
+      const inlineTopicInput = this.refs.weekTable.querySelector(
+        `input.week-inline-topic-input[data-lesson-id="${currentLessonId}"]`
+      );
+      if (!inlineTopicInput) {
+        return;
+      }
+      inlineTopicInput.focus();
+      inlineTopicInput.select();
+    });
+    return true;
+  }
+
+  finishInlineWeekBlockTopicEdit(saveChanges = true, nextLessonId = null) {
+    const activeElement = document.activeElement;
+    if (activeElement && typeof activeElement.blur === "function") {
+      activeElement.blur();
+    }
+    const lessonId = Number(this.inlineTopicLessonId || 0);
+    const nextInlineLessonId = Number(nextLessonId || 0);
+    if (!lessonId) {
+      this.resetInlineWeekBlockTopicEdit();
+      if (nextInlineLessonId) {
+        this.startInlineWeekBlockTopicEdit(nextInlineLessonId);
+      }
+      return;
+    }
+    const nextTopic = String(this.inlineTopicDraft || "").trim();
+    this.resetInlineWeekBlockTopicEdit();
+
+    if (!saveChanges) {
+      this.selectedLessonId = nextInlineLessonId || null;
+      this.renderWeekTable();
+      this.renderLessonSection();
+      if (nextInlineLessonId) {
+        this.startInlineWeekBlockTopicEdit(nextInlineLessonId);
+      }
+      return;
+    }
+
+    const lesson = this.store.getLessonById(lessonId);
+    const block = lesson ? this.store.getLessonBlock(lesson.id) : [];
+    const blocked = !lesson
+      || block.length === 0
+      || block.every((entry) => entry.canceled)
+      || lesson.noLesson
+      || block.some((entry) => entry.isEntfall || entry.isWrittenExam);
+    if (!blocked) {
+      this.store.updateLessonBlock(lessonId, nextTopic, false, false);
+    }
+    this.selectedLessonId = nextInlineLessonId || null;
+    this.renderWeekSection();
+    this.renderLessonSection();
+    this.renderCourseTimeline();
+    if (nextInlineLessonId) {
+      this.startInlineWeekBlockTopicEdit(nextInlineLessonId);
+    }
+  }
+
   promptEditWeekBlockTopic(lessonId) {
-    return this.openTopicDialog(lessonId);
+    return this.startInlineWeekBlockTopicEdit(lessonId);
   }
 
   openWeekBlockContextMenu(lessonId, clientX, clientY, source = "week") {
@@ -9973,6 +10244,7 @@ class PlannerApp {
     addBtn.title = "Unterrichtsfreien Tag hinzufügen";
     const plusIcon = document.createElement("span");
     plusIcon.className = "sidebar-add-plus";
+    plusIcon.setAttribute("aria-hidden", "true");
     addBtn.append(plusIcon);
     addLi.append(addBtn);
     this.refs.specialDayList.append(addLi);
@@ -9991,10 +10263,94 @@ class PlannerApp {
     this.renderWeekTable();
   }
 
+  syncWeekTableRowHeights() {
+    const table = this.refs.weekTable;
+    if (!table) {
+      return;
+    }
+
+    const tbody = table.tBodies[0];
+    const rowCount = tbody ? tbody.rows.length : 0;
+    if (!tbody || rowCount === 0) {
+      table.style.removeProperty("--week-row-height");
+      table.style.setProperty("--week-block-font-scale", "1");
+      return;
+    }
+
+    const tableHeight = table.clientHeight;
+    const headerHeight = table.tHead ? table.tHead.getBoundingClientRect().height : 0;
+    const availableBodyHeight = Math.max(0, tableHeight - headerHeight);
+    let rowHeight = availableBodyHeight / rowCount;
+    if (!Number.isFinite(rowHeight) || rowHeight <= 0) {
+      table.style.removeProperty("--week-row-height");
+      return;
+    }
+
+    // Prevent cumulative rounding/content pressure from creating vertical overflow.
+    rowHeight = Math.max(0, rowHeight - 0.25);
+    table.style.setProperty("--week-row-height", `${rowHeight}px`);
+
+    const overflow = table.scrollHeight - table.clientHeight;
+    if (overflow > 0.5) {
+      const corrected = Math.max(0, rowHeight - (overflow / rowCount));
+      table.style.setProperty("--week-row-height", `${corrected}px`);
+    }
+
+    this.syncWeekTileTextScale();
+  }
+
+  syncWeekTileTextScale() {
+    const table = this.refs.weekTable;
+    if (!table) {
+      return;
+    }
+
+    const blocks = [...table.querySelectorAll("button.lesson-block")];
+    if (blocks.length === 0) {
+      table.style.setProperty("--week-block-font-scale", "1");
+      return;
+    }
+
+    const fitsAll = () => {
+      for (const block of blocks) {
+        const title = block.querySelector(".title");
+        if (title) {
+          const blockRect = block.getBoundingClientRect();
+          const titleRect = title.getBoundingClientRect();
+          if (titleRect.top < blockRect.top - 0.5 || titleRect.bottom > blockRect.bottom + 0.5) {
+            return false;
+          }
+        }
+        if (block.scrollHeight - block.clientHeight > 0.5) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const minScale = 0.4;
+    const step = 0.02;
+    let scale = 1;
+    table.style.setProperty("--week-block-font-scale", scale.toFixed(2));
+    if (fitsAll()) {
+      return;
+    }
+
+    while (scale > minScale) {
+      scale = Math.max(minScale, Number((scale - step).toFixed(2)));
+      table.style.setProperty("--week-block-font-scale", scale.toFixed(2));
+      if (fitsAll()) {
+        return;
+      }
+    }
+  }
+
   renderWeekTable() {
     const year = this.activeSchoolYear;
     this.refs.weekTable.innerHTML = "";
     if (!year) {
+      this.refs.weekTable.style.removeProperty("--week-row-height");
+      this.refs.weekTable.style.setProperty("--week-block-font-scale", "1");
       return;
     }
 
@@ -10227,11 +10583,28 @@ class PlannerApp {
             td.rowSpan = block.rowSpan;
             skipByDay[dayIndex] = block.rowSpan - 1;
           }
-          const chip = document.createElement("button");
-          chip.type = "button";
+          const inlineTopicLessonId = Number(this.inlineTopicLessonId || 0);
+          const inlineEditing = Boolean(
+            inlineTopicLessonId
+            && block.selectable
+            && !block.allCanceled
+            && !block.isNoLesson
+            && !block.isEntfall
+            && !block.isWritten
+            && block.lessons.some((entry) => entry.id === inlineTopicLessonId)
+          );
+          const chip = inlineEditing
+            ? document.createElement("div")
+            : document.createElement("button");
+          if (!inlineEditing) {
+            chip.type = "button";
+          }
           chip.className = "lesson-block";
           chip.dataset.lessonId = String(block.firstLessonId);
-          if (block.selectable) {
+          if (inlineEditing) {
+            chip.classList.add("inline-editing");
+            chip.title = "Thema bearbeiten · Enter: speichern · Esc: abbrechen";
+          } else if (block.selectable) {
             chip.title = "Linksklick: Thema bearbeiten / Rechtsklick: Weitere Aktionen";
           }
           chip.style.background = block.background;
@@ -10255,10 +10628,10 @@ class PlannerApp {
             chip.classList.add("selected");
           }
           chip.dataset.noLesson = block.isNoLesson ? "1" : "0";
-          if (!block.selectable) {
+          if (!block.selectable || inlineEditing) {
             chip.classList.add("not-selectable");
           }
-          if (block.allCanceled) {
+          if (block.allCanceled && !inlineEditing) {
             chip.disabled = true;
           }
           const courseName = String(block.courseName || "").trim();
@@ -10270,19 +10643,31 @@ class PlannerApp {
           title.className = "title";
           title.textContent = courseName || lines[0] || "\u00a0";
           chip.append(title);
-          const topicText = courseName
-            ? lines.join(" ")
-            : lines.slice(1).join(" ");
-          const shouldShowTopicLine = Boolean(topicText) && !(
-            courseName
-            && block.isNoLesson
-            && topicText.toLowerCase() === courseName.toLowerCase()
-          );
-          if (shouldShowTopicLine) {
-            const line = document.createElement("span");
-            line.className = "line";
-            line.textContent = topicText;
-            chip.append(line);
+          if (inlineEditing) {
+            const inlineTopicInput = document.createElement("input");
+            inlineTopicInput.type = "text";
+            inlineTopicInput.className = "week-inline-topic-input";
+            inlineTopicInput.dataset.lessonId = String(inlineTopicLessonId);
+            inlineTopicInput.maxLength = 240;
+            inlineTopicInput.placeholder = "Thema";
+            inlineTopicInput.value = String(this.inlineTopicDraft || "");
+            inlineTopicInput.setAttribute("aria-label", "Stundentitel bearbeiten");
+            chip.append(inlineTopicInput);
+          } else {
+            const topicText = courseName
+              ? lines.join(" ")
+              : lines.slice(1).join(" ");
+            const shouldShowTopicLine = Boolean(topicText) && !(
+              courseName
+              && block.isNoLesson
+              && topicText.toLowerCase() === courseName.toLowerCase()
+            );
+            if (shouldShowTopicLine) {
+              const line = document.createElement("span");
+              line.className = "line";
+              line.textContent = topicText;
+              chip.append(line);
+            }
           }
           td.append(chip);
           tr.append(td);
@@ -10301,8 +10686,8 @@ class PlannerApp {
     }
 
     this.refs.weekTable.append(thead, tbody);
-    const headerHeight = Math.max(1, Math.round(headerRow.getBoundingClientRect().height));
-    this.refs.weekTable.style.setProperty("--week-header-height", `${headerHeight}px`);
+    this.syncWeekTableRowHeights();
+    requestAnimationFrame(() => this.syncWeekTableRowHeights());
   }
 
   renderLessonSection() {
