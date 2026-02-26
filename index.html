@@ -30,6 +30,8 @@
   --danger: #ff8a8a;
   --warn: #facc15;
   --dropdown-bg: #1c2430;
+  --week-header-scale: 1;
+  --week-table-scale: 1;
 }
 
 * {
@@ -896,10 +898,10 @@ button.small {
 }
 
 .header-glass {
-  padding: 10px 12px;
+  padding: calc(10px * var(--week-header-scale, 1)) calc(12px * var(--week-header-scale, 1));
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: calc(10px * var(--week-header-scale, 1));
   background-color: var(--panel-strong);
 }
 
@@ -915,11 +917,11 @@ button.small {
 }
 
 .week-nav-btn {
-  width: 54px;
-  min-width: 54px;
-  height: 54px;
-  min-height: 54px;
-  border-radius: 26px;
+  width: calc(54px * var(--week-header-scale, 1));
+  min-width: calc(54px * var(--week-header-scale, 1));
+  height: calc(54px * var(--week-header-scale, 1));
+  min-height: calc(54px * var(--week-header-scale, 1));
+  border-radius: calc(26px * var(--week-header-scale, 1));
   padding: 0;
   text-align: center;
   display: inline-flex;
@@ -963,8 +965,8 @@ button.small {
 }
 
 .week-nav-icon {
-  width: 54px;
-  height: 54px;
+  width: calc(54px * var(--week-header-scale, 1));
+  height: calc(54px * var(--week-header-scale, 1));
   display: block;
 }
 
@@ -980,7 +982,7 @@ button.small {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: calc(10px * var(--week-header-scale, 1));
   flex: 1;
   min-width: 0;
 }
@@ -988,9 +990,10 @@ button.small {
 .kw-label {
   background-color: rgba(82, 150, 255, 0.12);
   border-color: rgba(82, 150, 255, 0.35);
-  min-width: 112px;
-  min-height: 40px;
-  font-size: 1.4rem;
+  min-width: calc(112px * var(--week-header-scale, 1));
+  min-height: calc(40px * var(--week-header-scale, 1));
+  padding: calc(0.45rem * var(--week-header-scale, 1)) calc(0.72rem * var(--week-header-scale, 1));
+  font-size: calc(1.4rem * var(--week-header-scale, 1));
   font-weight: 700;
   text-align: center;
   cursor: pointer;
@@ -1007,9 +1010,9 @@ button.small {
 }
 
 .calendar-btn {
-  width: 50px;
-  min-width: 50px;
-  height: 36px;
+  width: calc(50px * var(--week-header-scale, 1));
+  min-width: calc(50px * var(--week-header-scale, 1));
+  height: calc(36px * var(--week-header-scale, 1));
   border-radius: 0;
   padding: 0;
   background: transparent;
@@ -1040,8 +1043,8 @@ button.small {
 }
 
 .current-week-icon {
-  width: 50px;
-  height: 36px;
+  width: calc(50px * var(--week-header-scale, 1));
+  height: calc(36px * var(--week-header-scale, 1));
   display: block;
   pointer-events: none;
 }
@@ -1243,7 +1246,7 @@ button.small {
   height: 100%;
   min-height: 0;
   overflow-y: hidden;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 #view-course .table-panel {
@@ -1277,13 +1280,14 @@ body[data-view="course"] .sidebar-list {
 }
 
 #week-table {
-  min-width: 640px;
+  min-width: 0;
 }
 
 #view-week #week-table {
   height: 100%;
   box-sizing: border-box;
   --week-block-font-scale: 1;
+  --week-table-scale: 1;
 }
 
 #week-table th,
@@ -1293,8 +1297,13 @@ body[data-view="course"] .sidebar-list {
   border: none;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0.34rem;
+  padding: calc(0.34rem * var(--week-table-scale, 1));
   vertical-align: middle;
+}
+
+#week-table th,
+#week-table td {
+  font-size: calc(1rem * var(--week-table-scale, 1));
 }
 
 #week-table tr > *:last-child,
@@ -1378,9 +1387,9 @@ body[data-view="course"] .sidebar-list {
 }
 
 #week-table td.hour {
-  width: 34px;
-  min-width: 34px;
-  max-width: 34px;
+  width: calc(34px * var(--week-table-scale, 1));
+  min-width: calc(34px * var(--week-table-scale, 1));
+  max-width: calc(34px * var(--week-table-scale, 1));
   font-weight: 700;
   text-align: center;
   background: rgba(24, 31, 43, 0.65);
@@ -1390,12 +1399,20 @@ body[data-view="course"] .sidebar-list {
 
 #view-week #week-table tbody tr {
   height: var(--week-row-height, auto);
+  min-height: var(--week-row-height, auto);
+  max-height: var(--week-row-height, auto);
+}
+
+#view-week #week-table tbody td:not([rowspan]) {
+  height: var(--week-row-height, auto);
+  min-height: var(--week-row-height, auto);
+  max-height: var(--week-row-height, auto);
 }
 
 #week-table th:first-child {
-  width: 34px;
-  min-width: 34px;
-  max-width: 34px;
+  width: calc(34px * var(--week-table-scale, 1));
+  min-width: calc(34px * var(--week-table-scale, 1));
+  max-width: calc(34px * var(--week-table-scale, 1));
   padding-left: 0.12rem;
   padding-right: 0.12rem;
 }
@@ -1420,7 +1437,7 @@ body[data-view="course"] .sidebar-list {
 
 .day-head .day-date {
   color: rgba(219, 228, 239, 0.85);
-  font-size: 0.79rem;
+  font-size: calc(0.79rem * var(--week-table-scale, 1));
 }
 
 .day-head.today .day-name {
@@ -1467,7 +1484,8 @@ body[data-view="course"] .sidebar-list {
 }
 
 .week-block-cell {
-  padding: 0.16rem;
+  padding: calc(0.16rem * var(--week-table-scale, 1));
+  overflow: hidden;
 }
 
 .day-cell.empty {
@@ -1481,17 +1499,19 @@ body[data-view="course"] .sidebar-list {
 
 .lesson-block {
   border: 1px solid rgba(0, 0, 0, 0.18);
-  border-radius: 8px;
-  padding: 0.24rem 0.28rem;
+  border-radius: calc(8px * var(--week-table-scale, 1));
+  padding: calc(0.24rem * var(--week-table-scale, 1)) calc(0.28rem * var(--week-table-scale, 1));
   width: 100%;
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   justify-items: center;
   align-items: center;
-  row-gap: 0.12rem;
+  row-gap: calc(0.12rem * var(--week-table-scale, 1));
   text-align: center;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
   background: rgba(102, 153, 222, 0.82);
   font-weight: 700;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
@@ -1546,7 +1566,7 @@ body[data-view="course"] .sidebar-list {
   max-width: 100%;
   text-align: center;
   pointer-events: none;
-  font-size: calc(1rem * var(--week-block-font-scale, 1));
+  font-size: calc(1rem * var(--week-table-scale, 1) * var(--week-block-font-scale, 1));
   line-height: 1.1;
   font-weight: 700;
 }
@@ -1556,7 +1576,7 @@ body[data-view="course"] .sidebar-list {
   width: 100%;
   max-width: 100%;
   text-align: center;
-  font-size: calc(1.3rem * var(--week-block-font-scale, 1));
+  font-size: calc(1.3rem * var(--week-table-scale, 1) * var(--week-block-font-scale, 1));
   line-height: 1.12;
   opacity: 0.95;
 }
@@ -1571,20 +1591,46 @@ body[data-view="course"] .sidebar-list {
 
 .lesson-block.inline-editing {
   cursor: text;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  justify-content: stretch;
+}
+
+.lesson-block.inline-editing .title {
+  align-self: start;
 }
 
 .lesson-block .week-inline-topic-input {
   width: 100%;
   min-width: 0;
-  border-radius: 6px;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  align-self: stretch;
+  resize: none;
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  border-radius: calc(6px * var(--week-table-scale, 1));
   border: 1px solid rgba(255, 255, 255, 0.35);
   background: rgba(10, 16, 24, 0.22);
   color: inherit;
   text-align: center;
-  font-size: calc(1.08rem * var(--week-block-font-scale, 1));
+  text-align-last: center;
+  font-size: calc(1.3rem * var(--week-table-scale, 1) * var(--week-block-font-scale, 1));
   line-height: 1.12;
   font-weight: 700;
-  padding: 0.12rem 0.24rem;
+  padding: 0;
+}
+
+.lesson-block .week-inline-topic-input::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .lesson-block .week-inline-topic-input::placeholder {
@@ -2136,12 +2182,12 @@ label {
   }
 
   .header-glass {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .week-center {
-    order: -1;
-    flex: 1 1 100%;
+    order: 0;
+    flex: 1 1 auto;
   }
 }
 
@@ -8162,7 +8208,7 @@ class PlannerApp {
       if (this.locked) {
         return;
       }
-      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      const inlineTopicInput = event.target.closest(".week-inline-topic-input[data-lesson-id]");
       if (inlineTopicInput) {
         return;
       }
@@ -8190,7 +8236,7 @@ class PlannerApp {
         return;
       }
       this.hideContextMenu();
-      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      const inlineTopicInput = event.target.closest(".week-inline-topic-input[data-lesson-id]");
       if (inlineTopicInput) {
         return;
       }
@@ -8231,7 +8277,7 @@ class PlannerApp {
     });
 
     this.refs.weekTable.addEventListener("input", (event) => {
-      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      const inlineTopicInput = event.target.closest(".week-inline-topic-input[data-lesson-id]");
       if (!inlineTopicInput) {
         return;
       }
@@ -8240,10 +8286,11 @@ class PlannerApp {
         return;
       }
       this.inlineTopicDraft = inlineTopicInput.value;
+      this.syncInlineWeekBlockTopicInputSize(inlineTopicInput);
     });
 
     this.refs.weekTable.addEventListener("keydown", (event) => {
-      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      const inlineTopicInput = event.target.closest(".week-inline-topic-input[data-lesson-id]");
       if (!inlineTopicInput) {
         return;
       }
@@ -8253,9 +8300,22 @@ class PlannerApp {
       }
       this.inlineTopicDraft = inlineTopicInput.value;
       event.stopPropagation();
-      if (event.key === "Enter") {
+      if (event.key === "Enter" && !(event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         this.finishInlineWeekBlockTopicEdit(true);
+        return;
+      }
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        const start = Number(inlineTopicInput.selectionStart ?? inlineTopicInput.value.length);
+        const end = Number(inlineTopicInput.selectionEnd ?? start);
+        const current = String(inlineTopicInput.value || "");
+        const next = `${current.slice(0, start)}\n${current.slice(end)}`;
+        inlineTopicInput.value = next;
+        inlineTopicInput.selectionStart = start + 1;
+        inlineTopicInput.selectionEnd = start + 1;
+        this.inlineTopicDraft = inlineTopicInput.value;
+        this.syncInlineWeekBlockTopicInputSize(inlineTopicInput);
         return;
       }
       if (event.key === "Escape") {
@@ -8265,7 +8325,7 @@ class PlannerApp {
     });
 
     this.refs.weekTable.addEventListener("focusout", (event) => {
-      const inlineTopicInput = event.target.closest("input.week-inline-topic-input[data-lesson-id]");
+      const inlineTopicInput = event.target.closest(".week-inline-topic-input[data-lesson-id]");
       if (!inlineTopicInput) {
         return;
       }
@@ -8842,7 +8902,7 @@ class PlannerApp {
         this.positionWeekCalendarDialog();
       }
       if (this.currentView === "week") {
-        this.syncWeekTableRowHeights();
+        this.syncWeekLayoutScale();
       }
     });
 
@@ -9473,6 +9533,25 @@ class PlannerApp {
     this.inlineTopicDraft = "";
   }
 
+  syncInlineWeekBlockTopicInputSize(targetInput = null) {
+    const input = targetInput
+      || (
+        this.refs.weekTable
+          ? this.refs.weekTable.querySelector(
+            `.week-inline-topic-input[data-lesson-id="${Number(this.inlineTopicLessonId || 0)}"]`
+          )
+          : null
+      );
+    if (!input) {
+      return;
+    }
+
+    // Keep edit field strictly inside the existing lesson block so row heights stay stable.
+    input.style.height = "100%";
+    input.style.minHeight = "0";
+    input.style.maxHeight = "100%";
+  }
+
   startInlineWeekBlockTopicEdit(lessonId) {
     const lesson = this.store.getLessonById(lessonId);
     if (!lesson) {
@@ -9505,11 +9584,12 @@ class PlannerApp {
         return;
       }
       const inlineTopicInput = this.refs.weekTable.querySelector(
-        `input.week-inline-topic-input[data-lesson-id="${currentLessonId}"]`
+        `.week-inline-topic-input[data-lesson-id="${currentLessonId}"]`
       );
       if (!inlineTopicInput) {
         return;
       }
+      this.syncInlineWeekBlockTopicInputSize(inlineTopicInput);
       inlineTopicInput.focus();
       inlineTopicInput.select();
     });
@@ -9758,6 +9838,13 @@ class PlannerApp {
 
     this.refs.viewWeekBtn.classList.toggle("active", isWeek);
     this.refs.viewSettingsBtn.classList.toggle("active", isSettings);
+
+    if (isWeek) {
+      requestAnimationFrame(() => this.syncWeekLayoutScale());
+    } else if (this.refs.headerGlass && this.refs.weekTable) {
+      this.refs.headerGlass.style.setProperty("--week-header-scale", "1");
+      this.refs.weekTable.style.setProperty("--week-table-scale", "1");
+    }
   }
 
   renderSettingsTabs() {
@@ -10261,10 +10348,113 @@ class PlannerApp {
       this.positionWeekCalendarDialog();
     }
     this.renderWeekTable();
+    this.syncWeekLayoutScale();
+  }
+
+  syncWeekLayoutScale() {
+    const table = this.refs.weekTable;
+    const header = this.refs.headerGlass;
+    const weekView = this.refs.viewWeek;
+    const tablePanel = table && table.closest ? table.closest(".table-panel") : null;
+    if (!table || !header || !tablePanel) {
+      return;
+    }
+
+    if (this.currentView !== "week" || this.locked) {
+      header.style.setProperty("--week-header-scale", "1");
+      table.style.setProperty("--week-table-scale", "1");
+      return;
+    }
+
+    if (header.clientWidth <= 0 || tablePanel.clientWidth <= 0 || tablePanel.clientHeight <= 0) {
+      return;
+    }
+
+    const minHeaderScale = 0.38;
+    const minTableScale = 0.2;
+    const precision = 0.005;
+    let headerScale = 1;
+    let tableScale = 1;
+
+    const applyHeaderScale = () => {
+      header.style.setProperty("--week-header-scale", headerScale.toFixed(2));
+    };
+    const applyTableScale = () => {
+      table.style.setProperty("--week-table-scale", tableScale.toFixed(2));
+    };
+    const headerFits = () => header.scrollWidth <= header.clientWidth + 0.5;
+    const tableFitsWidth = () => table.scrollWidth <= tablePanel.clientWidth + 0.5;
+    const weekFitsHeight = () => !weekView || weekView.scrollHeight <= weekView.clientHeight + 0.5;
+    const tableFitsHeight = () => {
+      const tbody = table.tBodies[0];
+      if (!tbody || tbody.rows.length === 0) {
+        return true;
+      }
+      const lastRow = tbody.rows[tbody.rows.length - 1];
+      const panelRect = tablePanel.getBoundingClientRect();
+      const tableRect = table.getBoundingClientRect();
+      const lastRowRect = lastRow.getBoundingClientRect();
+      return tablePanel.scrollHeight <= tablePanel.clientHeight + 0.5
+        && tableRect.bottom <= panelRect.bottom + 0.5
+        && lastRowRect.bottom <= panelRect.bottom + 0.5;
+    };
+    const weekFitsAll = () => weekFitsHeight() && tableFitsHeight();
+    const syncForCurrentScales = () => {
+      applyHeaderScale();
+      applyTableScale();
+      this.syncWeekTableRowHeights();
+    };
+    const canFit = (tableCandidate, headerCandidate) => {
+      tableScale = clamp(Number(tableCandidate), minTableScale, 1);
+      headerScale = clamp(Number(headerCandidate), minHeaderScale, 1);
+      syncForCurrentScales();
+      return headerFits() && tableFitsWidth() && weekFitsAll();
+    };
+
+    let bestTableScale = minTableScale;
+    if (canFit(bestTableScale, minHeaderScale)) {
+      let low = bestTableScale;
+      let high = 1;
+      while ((high - low) > precision) {
+        const mid = (low + high) / 2;
+        if (canFit(mid, minHeaderScale)) {
+          bestTableScale = mid;
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+    } else {
+      tableScale = bestTableScale;
+      headerScale = minHeaderScale;
+      syncForCurrentScales();
+    }
+
+    tableScale = bestTableScale;
+    let bestHeaderScale = minHeaderScale;
+    if (canFit(tableScale, bestHeaderScale)) {
+      let low = bestHeaderScale;
+      let high = 1;
+      while ((high - low) > precision) {
+        const mid = (low + high) / 2;
+        if (canFit(tableScale, mid)) {
+          bestHeaderScale = mid;
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+    }
+
+    tableScale = Number(bestTableScale.toFixed(2));
+    headerScale = Number(bestHeaderScale.toFixed(2));
+    syncForCurrentScales();
+    this.syncInlineWeekBlockTopicInputSize();
   }
 
   syncWeekTableRowHeights() {
     const table = this.refs.weekTable;
+    const tablePanel = table && table.closest ? table.closest(".table-panel") : null;
     if (!table) {
       return;
     }
@@ -10277,7 +10467,7 @@ class PlannerApp {
       return;
     }
 
-    const tableHeight = table.clientHeight;
+    const tableHeight = tablePanel ? tablePanel.clientHeight : table.clientHeight;
     const headerHeight = table.tHead ? table.tHead.getBoundingClientRect().height : 0;
     const availableBodyHeight = Math.max(0, tableHeight - headerHeight);
     let rowHeight = availableBodyHeight / rowCount;
@@ -10288,15 +10478,65 @@ class PlannerApp {
 
     // Prevent cumulative rounding/content pressure from creating vertical overflow.
     rowHeight = Math.max(0, rowHeight - 0.25);
-    table.style.setProperty("--week-row-height", `${rowHeight}px`);
+    const applyUniformRowHeight = () => {
+      const px = `${rowHeight}px`;
+      table.style.setProperty("--week-row-height", px);
+      for (const row of tbody.rows) {
+        row.style.height = px;
+        row.style.minHeight = px;
+        row.style.maxHeight = px;
+      }
+      const spanCells = tbody.querySelectorAll("td[rowspan]");
+      for (const cell of spanCells) {
+        const span = Math.max(1, Number(cell.getAttribute("rowspan")) || 1);
+        const spanPx = `${Math.max(0, rowHeight * span)}px`;
+        cell.style.height = spanPx;
+        cell.style.minHeight = spanPx;
+        cell.style.maxHeight = spanPx;
+      }
+    };
 
-    const overflow = table.scrollHeight - table.clientHeight;
-    if (overflow > 0.5) {
-      const corrected = Math.max(0, rowHeight - (overflow / rowCount));
-      table.style.setProperty("--week-row-height", `${corrected}px`);
-    }
+    applyUniformRowHeight();
+
+    const tightenRowHeight = (maxPasses = 8) => {
+      for (let pass = 0; pass < maxPasses; pass += 1) {
+        const panelRect = tablePanel ? tablePanel.getBoundingClientRect() : null;
+        const tableRect = table.getBoundingClientRect();
+        const tbodyRows = tbody.rows;
+        const lastRow = tbodyRows.length > 0 ? tbodyRows[tbodyRows.length - 1] : null;
+        const lastRowRect = lastRow ? lastRow.getBoundingClientRect() : null;
+        const overflowByTable = table.scrollHeight - table.clientHeight;
+        const overflowByPanelScroll = tablePanel
+          ? (tablePanel.scrollHeight - tablePanel.clientHeight)
+          : 0;
+        const overflowByTableBottom = panelRect
+          ? (tableRect.bottom - panelRect.bottom)
+          : 0;
+        const overflowByLastRowBottom = (panelRect && lastRowRect)
+          ? (lastRowRect.bottom - panelRect.bottom)
+          : 0;
+        const overflow = Math.max(
+          0,
+          overflowByTable,
+          overflowByPanelScroll,
+          overflowByTableBottom,
+          overflowByLastRowBottom
+        );
+        if (overflow <= 0.5) {
+          return;
+        }
+        rowHeight = Math.max(0, rowHeight - (overflow / rowCount) - 0.05);
+        applyUniformRowHeight();
+        if (rowHeight <= 0) {
+          return;
+        }
+      }
+    };
+
+    tightenRowHeight(8);
 
     this.syncWeekTileTextScale();
+    tightenRowHeight(6);
   }
 
   syncWeekTileTextScale() {
@@ -10313,23 +10553,18 @@ class PlannerApp {
 
     const fitsAll = () => {
       for (const block of blocks) {
-        const title = block.querySelector(".title");
-        if (title) {
-          const blockRect = block.getBoundingClientRect();
-          const titleRect = title.getBoundingClientRect();
-          if (titleRect.top < blockRect.top - 0.5 || titleRect.bottom > blockRect.bottom + 0.5) {
-            return false;
-          }
+        if (block.scrollHeight - block.clientHeight > 1.5) {
+          return false;
         }
-        if (block.scrollHeight - block.clientHeight > 0.5) {
+        if (block.scrollWidth - block.clientWidth > 1.5) {
           return false;
         }
       }
       return true;
     };
 
-    const minScale = 0.4;
-    const step = 0.02;
+    const minScale = 0.25;
+    const step = 0.01;
     let scale = 1;
     table.style.setProperty("--week-block-font-scale", scale.toFixed(2));
     if (fitsAll()) {
@@ -10603,7 +10838,7 @@ class PlannerApp {
           chip.dataset.lessonId = String(block.firstLessonId);
           if (inlineEditing) {
             chip.classList.add("inline-editing");
-            chip.title = "Thema bearbeiten · Enter: speichern · Esc: abbrechen";
+            chip.title = "Thema bearbeiten · Enter: speichern · Strg/Cmd+Enter: Zeilenumbruch · Esc: abbrechen";
           } else if (block.selectable) {
             chip.title = "Linksklick: Thema bearbeiten / Rechtsklick: Weitere Aktionen";
           }
@@ -10644,12 +10879,13 @@ class PlannerApp {
           title.textContent = courseName || lines[0] || "\u00a0";
           chip.append(title);
           if (inlineEditing) {
-            const inlineTopicInput = document.createElement("input");
-            inlineTopicInput.type = "text";
+            const inlineTopicInput = document.createElement("textarea");
             inlineTopicInput.className = "week-inline-topic-input";
             inlineTopicInput.dataset.lessonId = String(inlineTopicLessonId);
             inlineTopicInput.maxLength = 240;
             inlineTopicInput.placeholder = "Thema";
+            inlineTopicInput.rows = 2;
+            inlineTopicInput.wrap = "soft";
             inlineTopicInput.value = String(this.inlineTopicDraft || "");
             inlineTopicInput.setAttribute("aria-label", "Stundentitel bearbeiten");
             chip.append(inlineTopicInput);
@@ -10686,8 +10922,8 @@ class PlannerApp {
     }
 
     this.refs.weekTable.append(thead, tbody);
-    this.syncWeekTableRowHeights();
-    requestAnimationFrame(() => this.syncWeekTableRowHeights());
+    this.syncWeekLayoutScale();
+    requestAnimationFrame(() => this.syncWeekLayoutScale());
   }
 
   renderLessonSection() {
